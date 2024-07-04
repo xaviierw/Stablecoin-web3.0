@@ -1,0 +1,233 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stablecoin Collateral Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 10px;
+            background-color: #1e2a38;
+            color: #ffffff;
+            text-align: center;
+        }
+
+        .form-container, .loading-container {
+            margin-top: 30px;
+            max-width: 300px;
+            margin: auto;
+        }
+
+        select, button {
+            font-size: 1em;
+            padding: 8px;
+            margin: 8px;
+            border-radius: 5px;
+            border: none;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        select {
+            background-color: #333;
+            color: #fff;
+        }
+
+        button {
+            background-color: #4caf50;
+            color: #fff;
+            cursor: pointer;
+        }
+
+            button:hover {
+                background-color: #45a049;
+            }
+
+        .loading-container {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 50vh;
+            max-width: 600px;
+            margin: auto;
+        }
+
+        .progress-bar {
+            width: 80%;
+            height: 10px;
+            background-color: #ddd;
+            margin-top: 10px;
+            border-radius: 5px;
+            overflow: hidden;
+            position: relative;
+            display: none;
+        }
+
+        .progress-bar-inner {
+            height: 100%;
+            background-color: #4caf50;
+            width: 0;
+        }
+
+        .loading-text {
+            margin-top: 5px;
+            color: #ffffff;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .result {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .chart-container {
+            width: 80%;
+            max-width: 600px;
+        }
+
+        .back-button-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .back-button {
+            background-color: #ff9800;
+            color: #fff;
+            cursor: pointer;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            display: none; /* Initially hide back button */
+        }
+
+        @media (min-width: 768px) {
+            body {
+                margin: 20px;
+            }
+
+            select, button {
+                font-size: 1.2em;
+                padding: 10px;
+                margin: 10px;
+                width: auto;
+            }
+
+            .form-container, .result, .loading-container {
+                margin-top: 50px;
+            }
+
+            .loading-container {
+                height: 50vh;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                margin: 5px;
+            }
+
+            select, button {
+                font-size: 0.9em;
+                padding: 6px;
+                margin: 6px;
+                width: 90%;
+            }
+        }
+
+        /* Enhanced error message styling */
+        .result p {
+            color: red;
+            font-weight: bold;
+        }
+
+        @keyframes loading {
+            from {
+                width: 0;
+            }
+
+            to {
+                width: 100%;
+            }
+        }
+
+        .info-container {
+            display: none; /* Initially hide info container */
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .info-card {
+            background-color: #333;
+            color: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            width: 45%;
+            text-align: left;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+            .info-card h2 {
+                margin-top: 0;
+                color: #4caf50; /* Accent color for headers */
+            }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Stablecoin Collateral Checker</h1>
+    <div class="form-container">
+        <form id="stablecoin-form">
+            <label for="stablecoin">Select Stablecoin:</label>
+            <select id="stablecoin" name="stablecoin">
+                <option value="tether">USDT</option>
+                <option value="usd-coin">USDC</option>
+                <option value="dai">DAI</option>
+            </select>
+            <button type="submit">Check Collateral</button>
+        </form>
+    </div>
+    <div class="loading-container" id="loading-container">
+        <img src="loading.gif" alt="Loading" width="100">
+        <div class="progress-bar" id="progress-bar">
+            <div class="progress-bar-inner" id="progress-bar-inner"></div>
+        </div>
+        <div class="loading-text" id="loading-text">Fetching data from CoinGecko...</div>
+    </div>
+    <div class="result" id="result" style="display: none;">
+        <div class="chart-container">
+            <canvas id="collateralChart"></canvas>
+        </div>
+    </div>
+    <div class="info-container" id="info-container">
+        <div class="info-card" id="minted-info">
+            <h2 id="minted-info-title">Minted Information</h2>
+            <p><strong>Ethereum Minted:</strong> <span id="eth-minted"></span></p>
+            <p><strong>Tron Minted:</strong> <span id="tron-minted"></span></p>
+            <p><strong>Ethereum Blockchain Number:</strong> <span id="eth-blockchain-number"></span></p>
+            <p><strong>Tron Blockchain Number:</strong> <span id="tron-blockchain-number"></span></p>
+            <p><strong>Total Minted:</strong> <span id="total-minted"></span></p>
+        </div>
+        <div class="info-card" id="custodian-info">
+            <h2>Custodian Collaterals</h2>
+            <p><strong>Custodian A:</strong></p>
+            <p>Cash: <span id="custodian-a-cash"></span></p>
+            <p>Cryptocurrency (mark to market): <span id="custodian-a-crypto"></span></p>
+            <p><strong>Custodian B:</strong></p>
+            <p>Corporate Bond: <span id="custodian-b-corp-bond"></span></p>
+            <p>US Government Bond: <span id="custodian-b-us-bond"></span></p>
+            <p><strong>Total Collateral Value:</strong> <span id="total-collateral-value"></span></p>
+        </div>
+    </div>
+    <div class="back-button-container">
+        <button class="back-button" onclick="location.reload()">Back to Home</button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
